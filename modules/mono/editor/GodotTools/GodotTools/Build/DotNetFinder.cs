@@ -86,6 +86,7 @@ namespace GodotTools.Build
 
             Version? latestVersionMatch = null;
             string? matchPath = null;
+            string? matchSdkDirName = null;
 
             foreach (var line in lines)
             {
@@ -95,7 +96,12 @@ namespace GodotTools.Build
                 if (sdkLineParts.Length < 2)
                     continue;
 
-                if (!Version.TryParse(sdkLineParts[0], out var lineVersion))
+                string rawVersionStr = sdkLineParts[0];
+
+                // Strip preview/prerelease suffix (e.g. "-rc.1.26425.128") so Version.TryParse succeeds
+                string versionWithoutPrerelease = rawVersionStr.Split('-', 2)[0];
+
+                if (!Version.TryParse(versionWithoutPrerelease, out var lineVersion))
                     continue;
 
                 // We're looking for the exact same major version
@@ -107,13 +113,15 @@ namespace GodotTools.Build
 
                 latestVersionMatch = lineVersion;
                 matchPath = sdkLineParts[1].TrimStart('[').TrimEnd(']');
+                matchSdkDirName = rawVersionStr;
             }
 
             if (latestVersionMatch == null)
                 return false;
 
             version = latestVersionMatch;
-            path = Path.Combine(matchPath!, version.ToString());
+            // Use the actual directory name on disk (which includes pre-release suffixes if present)
+            path = Path.Combine(matchPath!, matchSdkDirName!);
 
             return true;
         }
